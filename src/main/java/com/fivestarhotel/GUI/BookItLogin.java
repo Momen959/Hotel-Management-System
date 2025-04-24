@@ -1,12 +1,8 @@
 package com.fivestarhotel.GUI;
 
-import com.fivestarhotel.Database.Db;
-import com.fivestarhotel.Database.Select;
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyEvent;
-import java.sql.*;
 
 public class BookItLogin extends JFrame {
     private final Color BROWN = new Color(92, 64, 51);
@@ -53,7 +49,7 @@ public class BookItLogin extends JFrame {
         JPanel headerPanel = new JPanel();
         headerPanel.setBackground(OFF_WHITE);
 
-        JLabel titleLabel = new JLabel("Welcome To BookIt!", JLabel.CENTER);
+        JLabel titleLabel = new JLabel("BookIt Hotel Management", JLabel.CENTER);
         titleLabel.setFont(TITLE_FONT);
         titleLabel.setForeground(BROWN);
         headerPanel.add(titleLabel);
@@ -124,42 +120,23 @@ public class BookItLogin extends JFrame {
         loadingBar.setVisible(true);
         setEnabled(false); // Disable UI during authentication
 
-        SwingWorker<Boolean, Void> worker = new SwingWorker<>() {
-            private String userRole = null;
-
-            @Override
-            protected Boolean doInBackground() throws Exception {
-                try {
-                    if (checkAdminCredentials(email, password)) {
-                        userRole = "Admin";
-                        return true;
-                    } else if (checkReceptionistCredentials(email, password)) {
-                        userRole = "Receptionist";
-                        return true;
-                    }
-                    return false;
-                } catch (SQLException ex) {
-                    throw ex;
-                }
+        // Simulate authentication delay
+        Timer timer = new Timer(1500, e -> {
+            if (email.equals("admin@bookit.com") && password.equals("admin123")) {
+                System.out.println("Admin login successful");
+                openRoomManagement("Admin", 1);
+            } else if (email.equals("reception@bookit.com") && password.equals("reception123")) {
+                System.out.println("Receptionist login successful");
+                openRoomManagement("Receptionist", 2);
+            } else {
+                showError("Invalid email or password");
             }
 
-            @Override
-            protected void done() {
-                try {
-                    if (get()) { // Authentication successful
-                        openRoomManagement(userRole);
-                    } else {
-                        showError("Invalid email or password");
-                    }
-                } catch (Exception ex) {
-                    showError("Database error: " + ex.getMessage());
-                } finally {
-                    loadingBar.setVisible(false);
-                    setEnabled(true); // Re-enable UI
-                }
-            }
-        };
-        worker.execute();
+            loadingBar.setVisible(false);
+            setEnabled(true);
+        });
+        timer.setRepeats(false);
+        timer.start();
     }
 
     private boolean validateInputs(String email, String password) {
@@ -181,50 +158,12 @@ public class BookItLogin extends JFrame {
         return true;
     }
 
-    private boolean checkAdminCredentials(String email, String password) throws SQLException {
-        try (Connection conn = Db.connect()) {
-            PreparedStatement ps = conn.prepareStatement(
-                    "SELECT * FROM admin WHERE admin_email = ? AND admin_password = ?");
-            ps.setString(1, email);
-            ps.setString(2, password);
-            ResultSet rs = ps.executeQuery();
-            return rs.next();
-        }
-    }
-
-    private boolean checkReceptionistCredentials(String email, String password) throws SQLException {
-        try (Connection conn = Db.connect()) {
-            PreparedStatement ps = conn.prepareStatement(
-                    "SELECT * FROM receptionist WHERE receptionist_email = ? AND receptionist_password = ?");
-            ps.setString(1, email);
-            ps.setString(2, password);
-            ResultSet rs = ps.executeQuery();
-            return rs.next();
-        }
-    }
-
-    private void openRoomManagement(String userRole) {
-        try (Connection conn = Db.connect()) {
-            String query = userRole.equals("Admin")
-                    ? "SELECT admin_id FROM admin WHERE admin_email = ?"
-                    : "SELECT receptionist_id FROM receptionist WHERE receptionist_email = ?";
-
-            PreparedStatement ps = conn.prepareStatement(query);
-            ps.setString(1, emailField.getText());
-            ResultSet rs = ps.executeQuery();
-
-            if (rs.next()) {
-                int userId = rs.getInt(1);
-                SwingUtilities.invokeLater(() -> {
-                    new RoomManagement(userRole, userId).setVisible(true);
-                    dispose();
-                });
-            } else {
-                showError("Error: Could not retrieve user ID");
-            }
-        } catch (SQLException ex) {
-            showError("Database error: " + ex.getMessage());
-        }
+    private void openRoomManagement(String userRole, int userId) {
+        System.out.println("Opening Room Management as " + userRole + " with ID: " + userId);
+        SwingUtilities.invokeLater(() -> {
+            new RoomManagement(userRole, userId).setVisible(true);
+            dispose();
+        });
     }
 
     private void showError(String message) {
@@ -241,5 +180,12 @@ public class BookItLogin extends JFrame {
         button.setFont(BUTTON_FONT);
         button.setFocusPainted(false);
         button.setMnemonic(KeyEvent.VK_ENTER);
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            BookItLogin loginSystem = new BookItLogin();
+            loginSystem.setVisible(true);
+        });
     }
 }

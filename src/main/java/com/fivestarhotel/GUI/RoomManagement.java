@@ -1,17 +1,15 @@
 package com.fivestarhotel.GUI;
 
 import com.fivestarhotel.Database.Db;
-import com.fivestarhotel.Database.Select;
 import com.fivestarhotel.Room;
 import com.fivestarhotel.Room.RoomType;
 
 import javax.swing.*;
+import javax.swing.Timer;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.awt.event.*;
-import java.sql.*;
 import java.util.*;
-import java.util.Date;
 import java.util.List;
 
 public class RoomManagement extends JFrame {
@@ -26,6 +24,9 @@ public class RoomManagement extends JFrame {
     private String currentUserRole;
     private int currentUserId;
 
+    // Mock room data
+
+    private ArrayList<Room> mockRooms = Db.select.getRooms();
     public RoomManagement(String userRole, int userId) {
         this.currentUserRole = userRole;
         this.currentUserId = userId;
@@ -73,7 +74,6 @@ public class RoomManagement extends JFrame {
         JButton logoutButton = new JButton("Logout");
         styleButton(logoutButton, BROWN);
         logoutButton.addActionListener(e -> {
-            new BookItLogin().setVisible(true);
             dispose();
         });
         headerPanel.add(logoutButton, BorderLayout.WEST);
@@ -119,33 +119,22 @@ public class RoomManagement extends JFrame {
         roomsPanel.revalidate();
         roomsPanel.repaint();
 
-        SwingWorker<List<Room>, Void> worker = new SwingWorker<>() {
-            @Override
-            protected List<Room> doInBackground() throws Exception {
-                return new Select().getRooms();
+        // Simulate loading delay
+        Timer timer = new Timer(1000, e -> {
+            roomsPanel.removeAll();
+
+            if (mockRooms.isEmpty()) {
+                roomsPanel.add(new JLabel("No rooms found"));
+            } else {
+                mockRooms.forEach(room -> addRoomCard(room));
             }
 
-            @Override
-            protected void done() {
-                try {
-                    List<Room> rooms = get();
-                    roomsPanel.removeAll();
-
-                    if (rooms == null || rooms.isEmpty()) {
-                        roomsPanel.add(new JLabel("No rooms found"));
-                    } else {
-                        rooms.forEach(room -> addRoomCard(room));
-                    }
-                } catch (Exception e) {
-                    roomsPanel.add(new JLabel("Error loading rooms"));
-                } finally {
-                    loadingBar.setVisible(false);
-                    roomsPanel.revalidate();
-                    roomsPanel.repaint();
-                }
-            }
-        };
-        worker.execute();
+            loadingBar.setVisible(false);
+            roomsPanel.revalidate();
+            roomsPanel.repaint();
+        });
+        timer.setRepeats(false);
+        timer.start();
     }
 
     private void addRoomCard(Room room) {
@@ -187,13 +176,21 @@ public class RoomManagement extends JFrame {
         if (room.getStatus()) {
             JButton checkOutButton = new JButton("Check Out");
             styleButton(checkOutButton, BROWN);
-            checkOutButton.addActionListener(e -> checkOutRoom(room.getNum()));
+            checkOutButton.addActionListener(e -> {
+                JOptionPane.showMessageDialog(this,
+                        "Would check out Room #" + room.getNum() + " in real implementation",
+                        "Check Out", JOptionPane.INFORMATION_MESSAGE);
+            });
             buttonPanel.add(checkOutButton);
 
             if ("Admin".equals(currentUserRole)) {
-                JButton setAvailableButton = new JButton("Set Open");
+                JButton setAvailableButton = new JButton("Set Available");
                 styleButton(setAvailableButton, BROWN);
-                setAvailableButton.addActionListener(e -> setRoomAvailability(room.getNum(), false));
+                setAvailableButton.addActionListener(e -> {
+                    JOptionPane.showMessageDialog(this,
+                            "Would set Room #" + room.getNum() + " to available in real implementation",
+                            "Set Available", JOptionPane.INFORMATION_MESSAGE);
+                });
                 buttonPanel.add(setAvailableButton);
             }
         } else {
@@ -203,9 +200,13 @@ public class RoomManagement extends JFrame {
             buttonPanel.add(checkInButton);
 
             if ("Admin".equals(currentUserRole)) {
-                JButton setUnavailableButton = new JButton("Set Closed");
+                JButton setUnavailableButton = new JButton("Set Unavailable");
                 styleButton(setUnavailableButton, BROWN);
-                setUnavailableButton.addActionListener(e -> setRoomAvailability(room.getNum(), true));
+                setUnavailableButton.addActionListener(e -> {
+                    JOptionPane.showMessageDialog(this,
+                            "Would set Room #" + room.getNum() + " to unavailable in real implementation",
+                            "Set Unavailable", JOptionPane.INFORMATION_MESSAGE);
+                });
                 buttonPanel.add(setUnavailableButton);
             }
         }
@@ -243,41 +244,24 @@ public class RoomManagement extends JFrame {
         JButton submitButton = new JButton("Add Room");
         styleButton(submitButton, BROWN);
         submitButton.addActionListener(e -> {
-            try {
-                if (roomNumberField.getText().trim().isEmpty()) {
-                    showError(addRoomDialog, "Room number cannot be empty");
-                    return;
-                }
+            if (roomNumberField.getText().trim().isEmpty()) {
+                showError(addRoomDialog, "Room number cannot be empty");
+                return;
+            }
 
+            try {
                 int roomNumber = Integer.parseInt(roomNumberField.getText().trim());
                 RoomType roomType = (RoomType) roomTypeCombo.getSelectedItem();
                 boolean isBooked = bookedCheckbox.isSelected();
 
-                try (Connection conn = Db.connect()) {
-                    PreparedStatement ps = conn.prepareStatement(
-                            "INSERT INTO room (room_number, room_floor, room_type, room_status) VALUES (?, ?, ?, ?)");
-                    ps.setInt(1, roomNumber);
-                    ps.setInt(2, (roomNumber - 1) / 100 + 1);
-                    ps.setString(3, Room.convertRm(roomType));
-                    ps.setBoolean(4, isBooked);
-
-                    int rowsAffected = ps.executeUpdate();
-                    if (rowsAffected > 0) {
-                        JOptionPane.showMessageDialog(addRoomDialog,
-                                "Room #" + roomNumber + " added successfully!",
-                                "Success", JOptionPane.INFORMATION_MESSAGE);
-                        addRoomDialog.dispose();
-                        loadRooms();
-                    }
-                }
+                mockRooms.add(new Room(roomNumber, roomType, isBooked));
+                JOptionPane.showMessageDialog(addRoomDialog,
+                        "Room #" + roomNumber + " added successfully! (Mock implementation)",
+                        "Success", JOptionPane.INFORMATION_MESSAGE);
+                addRoomDialog.dispose();
+                loadRooms();
             } catch (NumberFormatException ex) {
                 showError(addRoomDialog, "Please enter a valid room number");
-            } catch (SQLException ex) {
-                if (ex.getErrorCode() == 1062) {
-                    showError(addRoomDialog, "Room #" + roomNumberField.getText() + " already exists");
-                } else {
-                    showError(addRoomDialog, "Database error: " + ex.getMessage());
-                }
             }
         });
 
@@ -341,27 +325,19 @@ public class RoomManagement extends JFrame {
                 );
 
                 if (confirm == JOptionPane.YES_OPTION) {
-                    try (Connection conn = Db.connect()) {
-                        PreparedStatement ps = conn.prepareStatement(
-                                "DELETE FROM room WHERE room_number = ?");
-                        ps.setInt(1, roomNumber);
-                        int rowsAffected = ps.executeUpdate();
-
-                        if (rowsAffected > 0) {
-                            JOptionPane.showMessageDialog(removeDialog,
-                                    "Room #" + roomNumber + " was successfully removed",
-                                    "Success", JOptionPane.INFORMATION_MESSAGE);
-                            removeDialog.dispose();
-                            loadRooms();
-                        } else {
-                            showError(removeDialog, "Room #" + roomNumber + " not found");
-                        }
+                    boolean removed = mockRooms.removeIf(room -> room.getNum() == roomNumber);
+                    if (removed) {
+                        JOptionPane.showMessageDialog(removeDialog,
+                                "Room #" + roomNumber + " was successfully removed (Mock implementation)",
+                                "Success", JOptionPane.INFORMATION_MESSAGE);
+                        removeDialog.dispose();
+                        loadRooms();
+                    } else {
+                        showError(removeDialog, "Room #" + roomNumber + " not found");
                     }
                 }
             } catch (NumberFormatException ex) {
                 showError(removeDialog, "Please enter a valid room number");
-            } catch (SQLException ex) {
-                showError(removeDialog, "Database error: " + ex.getMessage());
             }
         });
 
@@ -393,10 +369,9 @@ public class RoomManagement extends JFrame {
         roomInfoPanel.setBorder(BorderFactory.createTitledBorder("Room Information"));
         roomInfoPanel.setBackground(OFF_WHITE);
 
-        Room room = Db.select.getRoom(roomNumber);
         addFormField(roomInfoPanel, "Room Number:", new JLabel(String.valueOf(roomNumber)));
-        addFormField(roomInfoPanel, "Room Type:", new JLabel(room.getRoomType().toString()));
-        addFormField(roomInfoPanel, "Daily Rate:", new JLabel("$" + Room.getRate(room.getRoomType())));
+        addFormField(roomInfoPanel, "Room Type:", new JLabel("MOCK_TYPE"));
+        addFormField(roomInfoPanel, "Daily Rate:", new JLabel("$MOCK_RATE"));
 
         mainPanel.add(roomInfoPanel, BorderLayout.NORTH);
 
@@ -457,17 +432,9 @@ public class RoomManagement extends JFrame {
         addFormField(datesPanel, "Check-in Date:", checkInSpinner);
         addFormField(datesPanel, "Check-out Date:", checkOutSpinner);
 
-        JComboBox<String> receptionistCombo = new JComboBox<>();
         if ("Admin".equals(currentUserRole)) {
-            try {
-                Map<Integer, String> receptionists = getReceptionists();
-                receptionists.forEach((id, name) -> receptionistCombo.addItem(name + " (ID: " + id + ")"));
-                addFormField(datesPanel, "Receptionist:", receptionistCombo);
-            } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(checkInDialog,
-                        "Error loading receptionists: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
-            }
+            JComboBox<String> receptionistCombo = new JComboBox<>(new String[]{"Receptionist 1 (ID: 1)", "Receptionist 2 (ID: 2)"});
+            addFormField(datesPanel, "Receptionist:", receptionistCombo);
         }
 
         JButton submitButton = new JButton("Complete Check In");
@@ -481,7 +448,7 @@ public class RoomManagement extends JFrame {
                 }
 
                 int customerId = Integer.parseInt(customerIdField.getText());
-                if (customerExists(customerId)) {
+                if (customerId > 0) {
                     customerInfoLabel.setText("<html><b>Customer verified</b> - ready to check in</html>");
                     customerInfoLabel.setForeground(new Color(0, 128, 0));
                 } else {
@@ -491,9 +458,6 @@ public class RoomManagement extends JFrame {
                 }
             } catch (NumberFormatException ex) {
                 customerInfoLabel.setText("Please enter a valid customer ID");
-                customerInfoLabel.setForeground(Color.RED);
-            } catch (SQLException ex) {
-                customerInfoLabel.setText("Database error: " + ex.getMessage());
                 customerInfoLabel.setForeground(Color.RED);
             }
         });
@@ -510,7 +474,6 @@ public class RoomManagement extends JFrame {
                     return;
                 }
 
-                int customerId;
                 if (tabbedPane.getSelectedIndex() == 0) {
                     if (customerIdField.getText().isEmpty()) {
                         JOptionPane.showMessageDialog(checkInDialog,
@@ -518,7 +481,6 @@ public class RoomManagement extends JFrame {
                                 "Error", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
-                    customerId = Integer.parseInt(customerIdField.getText());
                 } else {
                     if (firstNameField.getText().isEmpty() || lastNameField.getText().isEmpty()) {
                         JOptionPane.showMessageDialog(checkInDialog,
@@ -526,24 +488,10 @@ public class RoomManagement extends JFrame {
                                 "Error", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
-                    customerId = registerNewCustomer(
-                            firstNameField.getText(),
-                            lastNameField.getText(),
-                            emailField.getText(),
-                            phoneField.getText()
-                    );
                 }
-
-                int receptionistId = currentUserId;
-                if ("Admin".equals(currentUserRole)) {
-                    String selected = (String) receptionistCombo.getSelectedItem();
-                    receptionistId = Integer.parseInt(selected.split("\\(ID: ")[1].replace(")", ""));
-                }
-
-                createBooking(roomNumber, customerId, receptionistId, checkInDate, checkOutDate);
 
                 JOptionPane.showMessageDialog(checkInDialog,
-                        "Room #" + roomNumber + " checked in successfully!",
+                        "Room #" + roomNumber + " checked in successfully! (Mock implementation)",
                         "Success", JOptionPane.INFORMATION_MESSAGE);
 
                 checkInDialog.dispose();
@@ -604,141 +552,6 @@ public class RoomManagement extends JFrame {
                 JOptionPane.ERROR_MESSAGE);
     }
 
-    private void setRoomAvailability(int roomNumber, boolean isAvailable) {
-        try (Connection conn = Db.connect()) {
-            PreparedStatement ps = conn.prepareStatement(
-                    "UPDATE room SET room_status = ? WHERE room_number = ?");
-            ps.setBoolean(1, isAvailable);
-            ps.setInt(2, roomNumber);
-            ps.executeUpdate();
-            loadRooms();
-            JOptionPane.showMessageDialog(this,
-                    "Room #" + roomNumber + " status updated",
-                    "Success", JOptionPane.INFORMATION_MESSAGE);
-        } catch (SQLException ex) {
-            showError(this, "Database error: " + ex.getMessage());
-        }
-    }
-
-    private void checkOutRoom(int roomNumber) {
-        try (Connection conn = Db.connect()) {
-            conn.setAutoCommit(false);
-            try {
-                PreparedStatement ps = conn.prepareStatement(
-                        "UPDATE room SET room_status = false WHERE room_number = ?");
-                ps.setInt(1, roomNumber);
-                ps.executeUpdate();
-
-                ps = conn.prepareStatement(
-                        "UPDATE billing SET billing_status = 1 " +
-                                "WHERE booking_id IN (SELECT booking_id FROM booking WHERE room_number = ?)");
-                ps.setInt(1, roomNumber);
-                ps.executeUpdate();
-
-                conn.commit();
-                loadRooms();
-                JOptionPane.showMessageDialog(this,
-                        "Room #" + roomNumber + " checked out successfully",
-                        "Success", JOptionPane.INFORMATION_MESSAGE);
-            } catch (SQLException ex) {
-                conn.rollback();
-                throw ex;
-            } finally {
-                conn.setAutoCommit(true);
-            }
-        } catch (SQLException ex) {
-            showError(this, "Database error: " + ex.getMessage());
-        }
-    }
-
-    private boolean customerExists(int customerId) throws SQLException {
-        try (Connection conn = Db.connect()) {
-            PreparedStatement ps = conn.prepareStatement(
-                    "SELECT * FROM customer WHERE customer_id = ?");
-            ps.setInt(1, customerId);
-            ResultSet rs = ps.executeQuery();
-            return rs.next();
-        }
-    }
-
-    private int registerNewCustomer(String firstName, String lastName, String email, String phone) throws SQLException {
-        try (Connection conn = Db.connect()) {
-            PreparedStatement ps = conn.prepareStatement(
-                    "INSERT INTO customer (customer_fname, customer_lname, customer_email, customer_phone) " +
-                            "VALUES (?, ?, ?, ?)", Statement.RETURN_GENERATED_KEYS);
-
-            ps.setString(1, firstName);
-            ps.setString(2, lastName);
-            ps.setString(3, email);
-            ps.setString(4, phone);
-            ps.executeUpdate();
-
-            try (ResultSet rs = ps.getGeneratedKeys()) {
-                if (rs.next()) {
-                    return rs.getInt(1);
-                }
-                throw new SQLException("Creating customer failed, no ID obtained.");
-            }
-        }
-    }
-
-    private void createBooking(int roomNumber, int customerId, int receptionistId,
-                               Date checkInDate, Date checkOutDate) throws SQLException {
-        try (Connection conn = Db.connect()) {
-            conn.setAutoCommit(false);
-            try {
-                PreparedStatement ps = conn.prepareStatement(
-                        "INSERT INTO booking (receptionist_id, customer_id, room_number, " +
-                                "check_in_date, check_out_date) VALUES (?, ?, ?, ?, ?)",
-                        Statement.RETURN_GENERATED_KEYS);
-
-                ps.setInt(1, receptionistId);
-                ps.setInt(2, customerId);
-                ps.setInt(3, roomNumber);
-                ps.setTimestamp(4, new Timestamp(checkInDate.getTime()));
-                ps.setTimestamp(5, new Timestamp(checkOutDate.getTime()));
-                ps.executeUpdate();
-
-                PreparedStatement updateRoom = conn.prepareStatement(
-                        "UPDATE room SET room_status = true WHERE room_number = ?");
-                updateRoom.setInt(1, roomNumber);
-                updateRoom.executeUpdate();
-
-                try (ResultSet rs = ps.getGeneratedKeys()) {
-                    if (rs.next()) {
-                        int bookingId = rs.getInt(1);
-                        PreparedStatement billingStmt = conn.prepareStatement(
-                                "INSERT INTO billing (booking_id, billing_status) VALUES (?, 0)");
-                        billingStmt.setInt(1, bookingId);
-                        billingStmt.executeUpdate();
-                    }
-                }
-                conn.commit();
-            } catch (SQLException e) {
-                conn.rollback();
-                throw e;
-            } finally {
-                conn.setAutoCommit(true);
-            }
-        }
-    }
-
-    private Map<Integer, String> getReceptionists() throws SQLException {
-        Map<Integer, String> receptionists = new HashMap<>();
-        try (Connection conn = Db.connect()) {
-            PreparedStatement ps = conn.prepareStatement(
-                    "SELECT receptionist_id, receptionist_fname, receptionist_lname FROM receptionist");
-            ResultSet rs = ps.executeQuery();
-            while (rs.next()) {
-                receptionists.put(
-                        rs.getInt("receptionist_id"),
-                        rs.getString("receptionist_fname") + " " + rs.getString("receptionist_lname")
-                );
-            }
-        }
-        return receptionists;
-    }
-
     // Custom layout manager for wrapping room cards
     static class WrapLayout extends FlowLayout {
         public WrapLayout() { super(); }
@@ -784,8 +597,8 @@ public class RoomManagement extends JFrame {
     }
 
     public static void main(String[] args) {
+        Db.connect("root", "mimimi45");
         SwingUtilities.invokeLater(() -> {
-            Db.connect("root", "mimimi45");
             RoomManagement roomManagement = new RoomManagement("Admin", 1);
             roomManagement.setVisible(true);
         });
