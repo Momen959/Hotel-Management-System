@@ -1,5 +1,6 @@
 package com.fivestarhotel;
 
+import com.fivestarhotel.Database.Db;
 import com.fivestarhotel.GUI.BookItLogin;
 
 import javax.swing.*;
@@ -24,7 +25,7 @@ public class App {
          *
          * Make sure to set the proper DB username and password in the GUI main methods
          */
-
+        Db.connect("root", "mimimi45");
         // Start the application
         SwingUtilities.invokeLater(() -> {
             BookItLogin loginSystem = new BookItLogin();

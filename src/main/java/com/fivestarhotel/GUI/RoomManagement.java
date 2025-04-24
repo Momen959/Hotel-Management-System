@@ -36,7 +36,7 @@ public class RoomManagement extends JFrame {
     private void initializeUI() {
         setTitle("BookIt - Room Management (" + currentUserRole + ")");
         setSize(1200, 800);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         getContentPane().setBackground(OFF_WHITE);
 
@@ -597,7 +597,7 @@ public class RoomManagement extends JFrame {
     }
 
     public static void main(String[] args) {
-        Db.connect("root", "mimimi45");
+        //Insert Db.connect(user,pass) here if you want to test
         SwingUtilities.invokeLater(() -> {
             RoomManagement roomManagement = new RoomManagement("Admin", 1);
             roomManagement.setVisible(true);
