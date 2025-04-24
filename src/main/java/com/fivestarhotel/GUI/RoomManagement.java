@@ -36,7 +36,7 @@ public class RoomManagement extends JFrame {
     private void initializeUI() {
         setTitle("BookIt - Room Management (" + currentUserRole + ")");
         setSize(1200, 800);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         getContentPane().setBackground(OFF_WHITE);
 
