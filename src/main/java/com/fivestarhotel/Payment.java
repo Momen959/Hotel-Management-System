@@ -1,5 +1,6 @@
 package com.fivestarhotel;
 
+import com.fivestarhotel.Database.Db;
 import com.fivestarhotel.users.Customer;
 
 public class Payment {
@@ -13,34 +14,41 @@ public class Payment {
 
     }
 
-    public boolean process(double amountPaid) {
+    // 0 no refunds no due amounts
+    // -1 refunded to balance
+    // -2 due amount
+    public double process(double amountPaid, int customer_id, int billId) {
         double usedFromBalance = Math.min(balance, amountDue);
         amountDue -= usedFromBalance;
         balance -= usedFromBalance;
-        return applyPayment(amountPaid);
+
+        double success = applyPayment(amountPaid, customer_id);
+        if (success == 0 || success == -1) {
+            Db.update.updateCustomerBalance(customer_id, balance);
+            Db.update.updateBill(billId, Billing.BillingStatus.PAID);
+        } else {
+            Db.update.updateCustomerBalance(customer_id, balance);
+        }
+
+        return success;
     }
 
-    public boolean directPay(double amountPaid) {
-        return applyPayment(amountPaid);
-    }
-
-    private boolean applyPayment(double amountPaid) {
+    private double applyPayment(double amountPaid, int customerId) {
         amountDue -= amountPaid;
 
         if (amountDue == 0) {
             System.out.println("you're good to go.");
-            return true;
+            return 0;
 
         } else if (amountDue < 0) {
             double refund = processHelper(amountDue);
             balance += refund;
-            // update db
             System.out.println("Adding " + refund + " to your balance!");
-            return true;
+            return refund;
 
         } else {
             System.err.println("you still need to pay: " + processHelper(amountDue));
-            return false;
+            return -2;
         }
     }
 

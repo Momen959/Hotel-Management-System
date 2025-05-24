@@ -2,34 +2,32 @@ package com.fivestarhotel;
 
 import com.fivestarhotel.Database.Db;
 import com.fivestarhotel.GUI.BookItLogin;
-
-import javax.swing.*;
+import com.fivestarhotel.users.Admin;
+import com.fivestarhotel.users.Customer;
 
 public class App {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         /*
-         * WELCOME TO Db!! You may do "limited" sql functionalities in Java by using
-         * Db.!!
-         * START BY CONNECTING TO YOUR OWN DATABASE SERVER, Use Db.connect() and add
-         * your username and password
+         * WELCOME TO BOOKIT!
+         * Step 1: Make sure to run the SQLScript
          *
-         * Afterwards use Db.select.loadRates(); to load in the rates from the database
+         * Step 2: make sure to change the username and password of Db.connect() to ur
+         * SQLServer username and pass
          *
-         * Db.connect("Enter username here (probably is just root)",
-         * "Enter password here");
+         * Step 3: Run Db.create.signUpUser(new Admin("admin", "admin",
+         * "admin@bookit.com", "Pass_123"));
+         * at least once
          *
-         * Use Db.select.loadRates(); to load the latest rates from the DB to the
-         * program
-         *
-         * NEW GUI INTERFACE ADDED, Make sure to add an admin/receptionist account before running the program
-         *
-         * Make sure to set the proper DB username and password in the GUI main methods
+         * Step 4: Login with admin@gbookit.com and Pass_123
          */
+
         Db.connect("root", "mimimi45");
-        // Start the application
-        SwingUtilities.invokeLater(() -> {
-            BookItLogin loginSystem = new BookItLogin();
-            loginSystem.setVisible(true);
-        });
+
+
+        Db.select.loadRates();
+        // run at least once
+
+        BookItLogin loginSystem = new BookItLogin();
+        loginSystem.setVisible(true);
     }
 }
